@@ -19,9 +19,6 @@ Research compendium for the P4P project. This repository contains the materials 
 
   - Vite + React study app for stimulus presentation, SAM ratings, webcam overlays, and optional API integration with the models.
   - How to run/build: see `Web application/README.md`.
- 
-- `Suggestions for future work`
-   - This file outlines some potential for future work.
 
 - `Suggestions for future work.pdf`
   - High-level recommendations for future work.
