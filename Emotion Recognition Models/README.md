@@ -14,6 +14,7 @@ Visual (active) model, passive biosignal CNN, and rule-based late fusion used in
   - Weights: `emotion_cnn*.pth`
   - Samples: `input-folder/tester.csv` and others
 - `late_fusion_module.py`: Rule-based late-fusion utilities used by the app
+- `demo_pipeline.py`: Integrated demo that runs passive CSV + visual video + fusion and saves JSON outputs under `demo_outputs/`
 
 ### Prerequisites
 
@@ -114,6 +115,27 @@ Endpoints:
 - Start this API server first: `python active/api_server.py` (default `http://127.0.0.1:8001`).
 - Ensure your web app points to these endpoints in components such as `PassiveSensor.jsx` and `FusionSensor.jsx`.
 - CORS is configured to allow `http://localhost:5173` by default.
+
+### Integrated demo pipeline
+
+Run a complete demo over a sample biosignal CSV and video, saving outputs to `demo_outputs/`:
+
+```bash
+python demo_pipeline.py
+```
+
+Requirements:
+
+- Ensure `passive/model/network/emotion_cnn.pth` exists
+- Ensure `passive/model/network/input-folder/tester.csv` exists
+- Ensure `visual_data_test.mp4` exists in this folder
+
+Outputs:
+
+- `demo_outputs/biosignal_predictions.json`
+- `demo_outputs/visual_predictions.json`
+- `demo_outputs/fused_predictions.json`
+- `demo_outputs/demo_summary.json`
 
 ### Notes on models and data
 
