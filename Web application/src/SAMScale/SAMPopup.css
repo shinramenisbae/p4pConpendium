@@ -1,0 +1,123 @@
+.sam-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+}
+
+.overlay{
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: rgba(0,0,0,0.6);
+  }
+  
+  .modal{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #aab99c;
+    padding: 2rem;
+    z-index: 1001;
+    border-width: 10px;
+    border-radius: 10px;
+    width: 900px;
+    max-width: 95vw;
+    height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  nav .circle-button{
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    background-color: white;
+    line-height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.3);
+    color: #2d432b;
+  }
+  
+  nav .circle-button:hover{
+    scale: 105%;
+    cursor: pointer;
+    box-shadow: 4px 10px 20px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .close-button{
+    position: fixed;
+    top: 4%;
+    right: 4%;
+  }
+
+  .scales{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .valence-scale, .arousal-scale{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Scale images down to fit within modal and keep aspect ratio */
+  .valence-scale img,
+  .arousal-scale img{
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 6px;
+  }
+
+  .radio-buttons{
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    width: 100%;
+    max-width: 720px;
+    margin: 8px auto 0 auto;
+  }
+
+  @media (max-width: 768px){
+    .modal{
+      width: 95vw;
+      padding: 1.25rem;
+    }
+
+    .radio-buttons{
+      gap: 12px;
+    }
+  }
+
+  .free-emotion{
+    display: flex;
+    gap: 10px;
+    align-self: center;
+    margin-bottom: 20px;
+  }
+
+  .emotion-desc{
+    font-size: 18px;
+    color: black;
+    font-weight: 600;
+  }
+
+  .free-field{
+    width: 250px;
+  }
