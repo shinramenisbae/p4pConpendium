@@ -24,13 +24,13 @@ Research compendium for the P4P project. This repository contains the materials 
 - Run model API locally:
 
   - `cd Emotion Recognition Models`
-  - Create venv and `pip install -r active/requirements.txt`
-  - Start server: `python active/api_server.py` (default `http://127.0.0.1:8001`)
+  - Create venv and `pip install -r "active model/requirements.txt"`
+  - Start server: `python "active model/api_server.py"` (default `http://127.0.0.1:8001`)
 
 - Run webcam classifier standalone:
 
   - `cd Emotion Recognition Models`
-  - `python active/emotion_detector.py`
+  - `python "active model/emotion_detector.py"`
 
 - Run web app:
   - `cd Web application`

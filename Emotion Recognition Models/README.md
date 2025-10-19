@@ -4,17 +4,15 @@ Visual (active) model, passive biosignal CNN, and rule-based late fusion used in
 
 ### Structure
 
-- `active/`
+- `active model/`
   - `emotion_detector.py`: Frame-level visual emotion inference
   - `api_server.py`: FastAPI server exposing visual, passive, and fusion endpoints
-  - `test_fer_plus.py`: Simple sanity test for the visual detector
   - `requirements.txt`: Python dependencies for active server/detector
-- `passive/model/network/`
-  - Core CNN code: `CNN.py`, `DataLoader.py`, `Run.py`, `Train.py`, helpers
-  - Weights: `emotion_cnn*.pth`
-  - Samples: `input-folder/tester.csv` and others
+- `biosignal model/`
+  - Core CNN code: `CNN.py`, `DataLoader.py`, `Run.py`, `Train.py`
+  - Weights: `emotion_cnn.pth`
 - `late_fusion_module.py`: Rule-based late-fusion utilities used by the app
-- `demo_pipeline.py`: Integrated demo that runs passive CSV + visual video + fusion and saves JSON outputs under `demo_outputs/`
+- `demo_pipeline.py`: Integrated demo that runs biosignal CSV + visual video + fusion and saves JSON outputs under `demo_outputs/`
 
 ### Prerequisites
 
@@ -31,25 +29,19 @@ python -m venv .venv
 pip install --upgrade pip
 
 # Active model + API server
-pip install -r active/requirements.txt
+pip install -r "active model/requirements.txt"
 ```
 
 If you plan to run training scripts under `passive/model/network/`, install any additional requirements those scripts prompt for.
 
-### Run visual (active) model locally (sanity test)
-
-```bash
-python active/test_fer_plus.py
-```
-
-This runs a quick check of the visual detector on a sample frame/video path if configured in the script.
+### Run visual (active) model locally
 
 ### Run emotion_detector.py as a standalone webcam app
 
 Runs the visual emotion classifier with a live webcam feed, drawing labels and saving classified frames locally.
 
 ```bash
-python active/emotion_detector.py
+python "active model/emotion_detector.py"
 ```
 
 Behavior and controls:
@@ -67,7 +59,7 @@ Notes:
 ### Run passive CNN locally on sample CSV
 
 ```bash
-python passive/model/network/Run.py --input passive/model/network/input-folder/tester.csv --weights passive/model/network/emotion_cnn.pth
+python "biosignal model/Run.py" --input "biosignal model/input-folder/tester.csv" --weights "biosignal model/emotion_cnn.pth"
 ```
 
 This will print valence and arousal class predictions for the provided biosignal window.
@@ -77,7 +69,7 @@ This will print valence and arousal class predictions for the provided biosignal
 The server exposes endpoints for visual detection, passive prediction (12s window), and late fusion. CORS is enabled for `http://localhost:5173` by default.
 
 ```bash
-python active/api_server.py
+python "active model/api_server.py"
 # Server: http://127.0.0.1:8001 (hosted via Uvicorn)
 ```
 
@@ -112,7 +104,7 @@ Endpoints:
 
 ### Hosting locally for the web app
 
-- Start this API server first: `python active/api_server.py` (default `http://127.0.0.1:8001`).
+- Start this API server first: `python "active model/api_server.py"` (default `http://127.0.0.1:8001`).
 - Ensure your web app points to these endpoints in components such as `PassiveSensor.jsx` and `FusionSensor.jsx`.
 - CORS is configured to allow `http://localhost:5173` by default.
 
@@ -126,8 +118,8 @@ python demo_pipeline.py
 
 Requirements:
 
-- Ensure `passive/model/network/emotion_cnn.pth` exists
-- Ensure `passive/model/network/input-folder/tester.csv` exists
+- Ensure `biosignal model/emotion_cnn.pth` exists
+- Ensure `biosignal model/input-folder/tester.csv` exists
 - Ensure `visual_data_test.mp4` exists in this folder
 
 Outputs:
@@ -139,12 +131,12 @@ Outputs:
 
 ### Notes on models and data
 
-- Pretrained weights are included under `passive/model/network/` (`emotion_cnn*.pth`).
+- Pretrained weights are included under `biosignal model/` (`emotion_cnn.pth`).
 - Large training datasets are not included; demos rely on packaged weights and sample CSVs/videos.
 - If GPU is available, PyTorch will use it; otherwise CPU inference is used.
 
 ### Troubleshooting
 
-- Import errors for passive CNN: ensure this folder is used as the working directory so relative imports resolve (`.../passive/model/network`).
-- Missing weights: verify `emotion_cnn.pth` exists under `passive/model/network/`.
+- Import errors for biosignal CNN: run from this folder so relative imports resolve (`.../biosignal model`).
+- Missing weights: verify `emotion_cnn.pth` exists under `biosignal model/`.
 - Research API unavailable: set `PASSIVE_SIMULATE_FROM` or omit credentials to use simulated predictions.
