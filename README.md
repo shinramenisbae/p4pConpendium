@@ -16,8 +16,12 @@ Research compendium for the P4P project. This repository contains the materials 
   - How to use: see the document inside this folder (README - Pre-pilot study data.docx).
 
 - `Web application/`
+
   - Vite + React study app for stimulus presentation, SAM ratings, webcam overlays, and optional API integration with the models.
   - How to run/build: see `Web application/README.md`.
+
+- `Suggestions for future work.pdf`
+  - High-level recommendations for future work.
 
 ### Quick start pointers
 
