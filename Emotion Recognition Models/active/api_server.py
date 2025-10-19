@@ -13,11 +13,11 @@ from emotion_detector import EmotionDetector
 # Load environment variables from a .env file, if present (search upwards)
 try:
     from dotenv import load_dotenv, find_dotenv  # type: ignore
+
     load_dotenv(find_dotenv(), override=False)
 except Exception:
     pass
 
-# --- Passive biosignal imports ---
 import os
 import sys
 import torch
@@ -25,7 +25,6 @@ import requests
 from datetime import datetime, timedelta
 from scipy.signal import resample
 
-# Ensure we can import the passive model
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PASSIVE_NET_DIR = os.path.abspath(
     os.path.join(_THIS_DIR, "..", "passive", "model", "network")
@@ -34,7 +33,7 @@ if _PASSIVE_NET_DIR not in sys.path:
     sys.path.append(_PASSIVE_NET_DIR)
 try:
     from CNN import EmotionCNN  # type: ignore
-except Exception as e:  # pragma: no cover
+except Exception as e:
     EmotionCNN = None  # fallback
 
 
@@ -62,8 +61,6 @@ class FusionPayload(BaseModel):
 
 
 app = FastAPI(title="Active Emotion API", version="0.1.0")
-
-# Allow local webapp (Vite dev) and any localhost origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -72,23 +69,21 @@ app.add_middleware(
         "http://localhost",
         "http://127.0.0.1",
     ],
-    # Allow any localhost/127.0.0.1 with any port, and common LAN dev hosts
     allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Create a single detector instance for reuse
 detector = EmotionDetector()
 
-# --- Passive model and research API setup ---
 PASSIVE_BASE_URL = os.getenv("PASSIVE_BASE_URL", "http://130.216.217.53:8000")
 PASSIVE_EMAIL = os.getenv("PASSIVE_EMAIL")
 PASSIVE_PASSWORD = os.getenv("PASSIVE_PASSWORD")
 PASSIVE_USER_ID = os.getenv("PASSIVE_USER_ID")
-# Optional simulation start (ISO format). If not provided, start from now-12s.
-PASSIVE_SIMULATE_FROM = os.getenv("PASSIVE_SIMULATE_FROM") or os.getenv("passive_simulate_from")
+PASSIVE_SIMULATE_FROM = os.getenv("PASSIVE_SIMULATE_FROM") or os.getenv(
+    "passive_simulate_from"
+)
 PASSIVE_DEBUG = str(os.getenv("PASSIVE_DEBUG", "")).lower() in ("1", "true", "yes", "y")
 
 if PASSIVE_DEBUG:
@@ -99,11 +94,9 @@ if PASSIVE_DEBUG:
     except Exception:
         pass
 
-# Global state for research API session and last timestamp window
 _passive_token: Optional[str] = None
 _passive_last_ts: Optional[datetime] = None
 
-# Load EmotionCNN weights
 _passive_model: Optional[EmotionCNN] = None
 _passive_model_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 try:
@@ -124,19 +117,13 @@ try:
         print(
             "[passive] Warning: EmotionCNN import failed; passive endpoint will simulate."
         )
-except Exception as e:  # pragma: no cover
+except Exception as e:
     print(f"[passive] Error loading model: {e}")
     _passive_model = None
-############################
-# Active image save config #
-############################
-# Save incoming webcam frames under active/output/<Pid>
 _SAVE_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "output"))
 
 
-
 def _fmt_time(dt: datetime) -> str:
-    # Match the format used in Run.py (12-hour clock)
     return dt.strftime("%Y-%m-%dT%I:%M:%S")
 
 
@@ -228,7 +215,6 @@ def predict(
     video_time_sec: int | None = Form(default=None),
 ):
     try:
-        # Accept multipart upload or JSON/base64
         img_bytes = None
         if image_file is not None:
             img_bytes = image_file.file.read()
@@ -239,19 +225,23 @@ def predict(
             if "," in data:
                 data = data.split(",", 1)[1]
             img_bytes = base64.b64decode(data)
-        # Prepare save path under output/<Pid> for annotated image
         saved_path = None
         fpath = None
         try:
             safe_pid = str(pid or "unknown").strip()
-            safe_pid = "".join(ch for ch in safe_pid if ch.isalnum() or ch in ("-", "_")) or "unknown"
+            safe_pid = (
+                "".join(ch for ch in safe_pid if ch.isalnum() or ch in ("-", "_"))
+                or "unknown"
+            )
             out_dir = os.path.join(_SAVE_ROOT, safe_pid)
             os.makedirs(out_dir, exist_ok=True)
-            # Build filename: "VideoID-VideoTime.jpg"
             raw_label = str(video_id or "video")
             base_label = os.path.basename(raw_label)
             base_label, _ = os.path.splitext(base_label)
-            safe_label = "".join(ch for ch in base_label if ch.isalnum() or ch in ("-", "_")) or "video"
+            safe_label = (
+                "".join(ch for ch in base_label if ch.isalnum() or ch in ("-", "_"))
+                or "video"
+            )
             try:
                 t_int = int(video_time_sec) if video_time_sec is not None else 0
             except Exception:
@@ -270,23 +260,22 @@ def predict(
 
         processed_img, results = detector.detect_emotions(img)
 
-        # Save the detector's annotated frame directly (consistent with emotion_detector.py)
         try:
             if fpath:
                 ok = cv2.imwrite(fpath, processed_img)
                 if ok and os.path.exists(fpath):
                     saved_path = fpath
                 else:
-                    print(f"[active] Warning: cv2.imwrite failed or file missing at {fpath}")
+                    print(
+                        f"[active] Warning: cv2.imwrite failed or file missing at {fpath}"
+                    )
         except Exception as e:
             print(f"[active] Error saving annotated frame: {e}")
 
-        # Select the most confident face (if any) as primary
         primary = None
         if results:
             primary = max(results, key=lambda r: r.get("confidence", 0.0))
 
-        # Convert any numpy types in results/primary to native Python for JSON serialization
         def to_python(obj):
             if isinstance(obj, (np.generic,)):
                 return obj.item()
@@ -361,7 +350,9 @@ def passive_predict():
                     v_class, a_class = _predict_valence_arousal_from_ppg(ppg)
                 else:
                     if PASSIVE_DEBUG:
-                        print(f"[passive] Debug: research API non-200: {resp.status_code}")
+                        print(
+                            f"[passive] Debug: research API non-200: {resp.status_code}"
+                        )
                     simulated = True
                     v_class, a_class = 1, 1
             else:
@@ -374,7 +365,9 @@ def passive_predict():
         except Exception:
             # Treat network/HTTP errors as simulated fallback
             if PASSIVE_DEBUG:
-                print("[passive] Debug: exception when fetching research data; simulating")
+                print(
+                    "[passive] Debug: exception when fetching research data; simulating"
+                )
             simulated = True
             v_class, a_class = 1, 1
 

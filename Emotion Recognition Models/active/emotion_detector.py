@@ -38,7 +38,6 @@ class EmotionDetector:
                     "microsoft/kosmos-2-patch14-224"
                 )
             else:
-                # load emotion classifier, note that this code snippet is part of the class constructor __init__
                 self.emotion_classifier = pipeline(
                     "image-classification",
                     model="dima806/facial_emotions_image_detection",
@@ -75,9 +74,6 @@ class EmotionDetector:
             "content": "happy",
         }
 
-        # Valence-Arousal mapping for late fusion (Russell's Circumplex Model)
-        # Valence: -1 (negative) to +1 (positive)
-        # Arousal: -1 (calm) to +1 (excited)
         self.emotion_to_valence_arousal = {
             "angry": {"valence": -0.8, "arousal": 0.8},  # Negative, High arousal
             "disgust": {"valence": -0.7, "arousal": 0.3},  # Negative, Medium arousal
@@ -96,20 +92,16 @@ class EmotionDetector:
         }
 
     def save_classified_frame(self, frame, emotions_detected):
-        """Save the frame with detected emotions to the output directory"""
+        """Save frame with detected emotions to the output directory"""
         try:
-            # Skip saving if no faces/emotions detected
             if not emotions_detected:
                 return
 
-            # Generate timestamp for filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
 
-            # Create emotion summary for filename
             emotion_summary = "_".join(
                 [result["emotion"] for result in emotions_detected]
             )
-            # Sanitize filename by removing/replacing invalid characters
             emotion_summary = "".join(
                 c for c in emotion_summary if c.isalnum() or c in "_ -"
             ).strip()
@@ -124,19 +116,14 @@ class EmotionDetector:
             print(f"Error saving frame: {e}")
 
     def detect_emotions(self, frame):
-        # convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # detect faces
         faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
 
-        # store results
         results = []
         for x, y, w, h in faces:
-            # crop face
             face_img = frame[y : y + h, x : x + w]
 
-            # convert to PIL image
             pil_img = Image.fromarray(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
 
             try:
@@ -144,12 +131,10 @@ class EmotionDetector:
                 emotion = predictions[0]["label"]
                 confidence = predictions[0]["score"]
 
-                # Get valence/arousal values for late fusion
                 valence_arousal = self.map_emotion_to_valence_arousal(
                     emotion, confidence
                 )
 
-                # Create display text with valence/arousal if available
                 if valence_arousal and self.enable_valence_arousal:
                     display_text = f"{emotion} ({confidence:.2f}) V:{valence_arousal['valence']:.2f} A:{valence_arousal['arousal']:.2f}"
                 else:
@@ -186,7 +171,6 @@ class EmotionDetector:
         return frame, results
 
     def start_webcam(self, camera_index=0):
-        # Access webcam with specified index
         cap = cv2.VideoCapture(camera_index)
 
         if not cap.isOpened():
@@ -205,7 +189,6 @@ class EmotionDetector:
         latest_results = []
 
         while True:
-            # Read frame from webcam
             ret, frame = cap.read()
 
             if not ret:
@@ -214,27 +197,22 @@ class EmotionDetector:
 
             current_time = time.time()
 
-            # Process frames at intervals to avoid overloading
             if current_time - last_process_time >= process_interval:
-                # Process the frame
                 processed_frame, emotions = self.detect_emotions(
                     frame.copy()
                 )  # Work on a copy
 
-                # Save the processed frame with detected emotions
                 self.save_classified_frame(processed_frame, emotions)
 
                 latest_results = emotions  # Store the latest results
                 frame = processed_frame
                 last_process_time = current_time
             else:
-                # Draw the previously detected results on the current frame
                 for result in latest_results:
                     x, y, w, h = result["position"]
                     emotion = result["emotion"]
                     confidence = result.get("confidence", 0.0)
 
-                    # Create display text with valence/arousal if available
                     if (
                         self.enable_valence_arousal
                         and "valence" in result
@@ -256,18 +234,14 @@ class EmotionDetector:
                         2,
                     )
 
-            # Display the frame
             cv2.imshow("Emotion Detection", frame)
 
-            # Check for key presses
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
                 break
             elif key == ord("c"):
-                # Release current camera
                 cap.release()
 
-                # Switch to next camera
                 new_camera = (camera_index + 1) % 10  # Try up to 10 cameras
                 cap = cv2.VideoCapture(new_camera)
 
@@ -276,7 +250,6 @@ class EmotionDetector:
                     print(f"Switched to camera {camera_index}")
                 else:
                     print(f"Could not open camera {new_camera}, trying again...")
-                    # Try to reopen the previous camera
                     cap = cv2.VideoCapture(camera_index)
                     if not cap.isOpened():
                         print("Error reopening previous camera. Exiting.")

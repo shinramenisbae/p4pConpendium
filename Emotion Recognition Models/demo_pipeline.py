@@ -11,7 +11,6 @@ from scipy.signal import resample
 import ast
 import re
 
-# Import the existing modules
 from active.emotion_detector import EmotionDetector
 from passive.model.network.CNN import EmotionCNN
 from late_fusion_module import LateFusionModule, FusionStrategy
@@ -79,13 +78,8 @@ class IntegratedDemoPipeline:
         self.biosignal_weight = biosignal_weight
         self.visual_weight = visual_weight
 
-        # Create output directory
         os.makedirs(output_dir, exist_ok=True)
-
-        # Initialize components
         self._initialize_components()
-
-        # Storage for results
         self.biosignal_predictions = []
         self.visual_predictions = []
         self.fused_predictions = []
@@ -100,7 +94,6 @@ class IntegratedDemoPipeline:
         """Initialize all the required components"""
         print("🔧 Initializing pipeline components...")
 
-        # Initialize biosignal model
         print("  📊 Loading biosignal CNN model...")
         try:
             self.biosignal_model = EmotionCNN()
@@ -114,7 +107,6 @@ class IntegratedDemoPipeline:
             print(f"  ❌ Failed to load biosignal model: {e}")
             self.biosignal_model = None
 
-        # Initialize visual detector
         print("  🎭 Loading visual emotion detector...")
         try:
             self.visual_detector = EmotionDetector(enable_valence_arousal=True)
@@ -123,7 +115,6 @@ class IntegratedDemoPipeline:
             print(f"  ❌ Failed to initialize visual detector: {e}")
             self.visual_detector = None
 
-        # Initialize fusion module
         print("  🔀 Initializing late fusion module...")
         try:
             self.fusion_module = LateFusionModule(
@@ -154,18 +145,14 @@ class IntegratedDemoPipeline:
             return []
 
         try:
-            # Read CSV file
             df = pd.read_csv(self.csv_file_path)
             print(f"  📋 Loaded CSV with {len(df)} rows")
 
-            # Extract PPG data from the 'ppg_gr' column
             ppg_data = []
             for idx, row in df.iterrows():
                 try:
-                    # Parse the PPG data string
                     ppg_str = row["ppg_gr"]
                     if isinstance(ppg_str, str):
-                        # Remove brackets and split by comma
                         ppg_str = ppg_str.strip("[]")
                         ppg_values = [int(x.strip()) for x in ppg_str.split(",")]
                         ppg_data.extend(ppg_values)
@@ -181,28 +168,19 @@ class IntegratedDemoPipeline:
                 print("❌ No valid PPG data found")
                 return []
 
-            # Process PPG data similar to Run.py
             ppg_array = np.array(ppg_data)
-
-            # Upsample to 64Hz (assuming original is 25Hz)
             ppg_64hz = self._upsample_to_64hz(ppg_array)
-
-            # Normalize data
             ppg_min = np.min(ppg_64hz)
             ppg_max = np.max(ppg_64hz)
             ppg_normalized = (ppg_64hz - ppg_min) / (ppg_max - ppg_min) * 1000
-
-            # Extract segments (140 samples each)
             segments = self._extract_pulses(ppg_normalized, pulse_len=140)
 
             print(f"  🔄 Created {len(segments)} signal segments")
 
-            # Generate predictions for each segment
             predictions = []
             for i, segment in enumerate(segments):
                 print(f"  🧠 Processing segment {i+1}/{len(segments)}...")
 
-                # Convert to tensor
                 segment_tensor = torch.tensor(
                     segment.reshape(1, -1), dtype=torch.float32
                 )
@@ -212,18 +190,15 @@ class IntegratedDemoPipeline:
                         segment_tensor
                     )
 
-                    # Get predictions
                     valence_pred = torch.argmax(valence_logits, dim=1).item()
                     arousal_pred = torch.argmax(arousal_logits, dim=1).item()
 
-                    # Calculate confidence
                     valence_probs = torch.softmax(valence_logits, dim=1)
                     arousal_probs = torch.softmax(arousal_logits, dim=1)
                     valence_conf = torch.max(valence_probs, dim=1)[0].item()
                     arousal_conf = torch.max(arousal_probs, dim=1)[0].item()
                     overall_conf = (valence_conf + arousal_conf) / 2.0
 
-                # Create prediction result
                 prediction = {
                     "segment_id": i + 1,
                     "valence": valence_pred,
@@ -240,10 +215,8 @@ class IntegratedDemoPipeline:
                     f"    ✅ Segment {i+1}: V={valence_pred}, A={arousal_pred}, Conf={overall_conf:.3f}"
                 )
 
-            # Convert numpy types before saving
             predictions_serializable = convert_numpy_types(predictions)
 
-            # Save biosignal predictions
             biosignal_output_path = os.path.join(
                 self.output_dir, "biosignal_predictions.json"
             )
@@ -276,13 +249,11 @@ class IntegratedDemoPipeline:
             return []
 
         try:
-            # Open video file
             cap = cv2.VideoCapture(self.video_file_path)
             if not cap.isOpened():
                 print(f"❌ Could not open video file: {self.video_file_path}")
                 return []
 
-            # Get video properties
             fps = cap.get(cv2.CAP_PROP_FPS)
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             duration = total_frames / fps if fps > 0 else 0
@@ -291,8 +262,7 @@ class IntegratedDemoPipeline:
                 f"  📹 Video info: {total_frames} frames, {fps:.2f} FPS, {duration:.2f}s duration"
             )
 
-            # Process frames at regular intervals (every 2 seconds for demo)
-            frame_interval = int(fps * 2)  # Process every 2 seconds
+            frame_interval = int(fps * 2)
             predictions = []
             frame_count = 0
 
@@ -305,22 +275,18 @@ class IntegratedDemoPipeline:
 
                 frame_count += 1
 
-                # Process every Nth frame based on interval
                 if frame_count % frame_interval == 0:
                     current_time = frame_count / fps
                     print(
                         f"  🖼️  Processing frame {frame_count}/{total_frames} at {current_time:.1f}s..."
                     )
 
-                    # Detect emotions in the frame
                     processed_frame, results = self.visual_detector.detect_emotions(
                         frame.copy()
                     )
 
                     if results:
-                        # Process each detected face
                         for face_idx, result in enumerate(results):
-                            # Get valence/arousal values
                             valence_arousal = (
                                 self.visual_detector.map_emotion_to_valence_arousal(
                                     result["emotion"], result["confidence"]
@@ -354,7 +320,6 @@ class IntegratedDemoPipeline:
                     else:
                         print(f"    ⚠️  No faces detected in frame {frame_count}")
 
-                # Show progress
                 if frame_count % (frame_interval * 5) == 0:
                     progress = (frame_count / total_frames) * 100
                     print(
@@ -367,10 +332,8 @@ class IntegratedDemoPipeline:
                 f"  🎯 Completed video processing: {len(predictions)} emotion predictions"
             )
 
-            # Convert numpy types before saving
             predictions_serializable = convert_numpy_types(predictions)
 
-            # Save visual predictions
             visual_output_path = os.path.join(
                 self.output_dir, "visual_predictions.json"
             )
@@ -409,23 +372,17 @@ class IntegratedDemoPipeline:
         try:
             fused_predictions = []
 
-            # For demo purposes, we'll fuse predictions at regular time intervals
-            # We'll match biosignal segments with video frames based on timing
-
             print(f"  📊 Biosignal predictions: {len(self.biosignal_predictions)}")
             print(f"  🎭 Visual predictions: {len(self.visual_predictions)}")
 
-            # Create time-based fusion
             for bio_idx, bio_pred in enumerate(self.biosignal_predictions):
                 print(f"  🔄 Fusing biosignal segment {bio_idx + 1}...")
 
-                # Find corresponding visual prediction (closest in time)
                 best_visual_match = None
                 best_time_diff = float("inf")
 
                 for vis_pred in self.visual_predictions:
-                    # Calculate time difference (biosignal segments are ~2.2 seconds each)
-                    bio_time = bio_idx * 2.2  # Approximate timing
+                    bio_time = bio_idx * 2.2
                     vis_time = vis_pred["timestamp"]
                     time_diff = abs(bio_time - vis_time)
 
@@ -438,7 +395,6 @@ class IntegratedDemoPipeline:
                         f"    🎯 Matched with visual frame at {best_visual_match['timestamp']:.1f}s (diff: {best_time_diff:.1f}s)"
                     )
 
-                    # Create biosignal prediction object for fusion
                     from late_fusion_module import BiosignalPrediction, VisualPrediction
 
                     bio_pred_obj = BiosignalPrediction(
@@ -457,12 +413,10 @@ class IntegratedDemoPipeline:
                         timestamp=best_visual_match["timestamp"],
                     )
 
-                    # Perform fusion
                     fused_pred = self.fusion_module.fuse_predictions(
                         bio_pred_obj, vis_pred_obj
                     )
 
-                    # Convert to dictionary
                     fused_dict = {
                         "fusion_id": bio_idx + 1,
                         "biosignal_segment": bio_idx + 1,
@@ -489,10 +443,8 @@ class IntegratedDemoPipeline:
 
             print(f"  🎯 Completed fusion: {len(fused_predictions)} fused predictions")
 
-            # Convert numpy types before saving
             fused_predictions_serializable = convert_numpy_types(fused_predictions)
 
-            # Save fused predictions
             fused_output_path = os.path.join(self.output_dir, "fused_predictions.json")
             with open(fused_output_path, "w") as f:
                 json.dump(fused_predictions_serializable, f, indent=2)
@@ -517,22 +469,18 @@ class IntegratedDemoPipeline:
 
         start_time = time.time()
 
-        # Step 1: Process biosignal data
         print("\n📊 STEP 1: Processing Biosignal Data")
         print("-" * 40)
         self.process_biosignal_data()
 
-        # Step 2: Process video data
         print("\n🎬 STEP 2: Processing Video Data")
         print("-" * 40)
         self.process_video_data()
 
-        # Step 3: Perform fusion
         print("\n🔀 STEP 3: Performing Late Fusion")
         print("-" * 40)
         self.perform_fusion()
 
-        # Step 4: Generate summary report
         print("\n📋 STEP 4: Generating Summary Report")
         print("-" * 40)
         self._generate_summary_report()
@@ -571,17 +519,14 @@ class IntegratedDemoPipeline:
                 "fusion_summary": self._analyze_fusion_predictions(),
             }
 
-            # Convert numpy types before saving
             summary_serializable = convert_numpy_types(summary)
 
-            # Save summary report
             summary_path = os.path.join(self.output_dir, "demo_summary.json")
             with open(summary_path, "w") as f:
                 json.dump(summary_serializable, f, indent=2)
 
             print(f"  💾 Summary report saved to: {summary_path}")
 
-            # Print summary to console
             print("\n📊 DEMO SUMMARY:")
             print(f"  📈 Biosignal predictions: {len(self.biosignal_predictions)}")
             print(f"  🎭 Visual predictions: {len(self.visual_predictions)}")
@@ -664,11 +609,9 @@ class IntegratedDemoPipeline:
 
 def main():
     """Main function to run the demo pipeline"""
-    # File paths
     csv_file = "passive/model/network/input-folder/tester.csv"
     video_file = "visual_data_test.mp4"
 
-    # Check if files exist
     if not os.path.exists(csv_file):
         print(f"❌ CSV file not found: {csv_file}")
         return
@@ -684,7 +627,6 @@ def main():
     print(f"⚖️  Fusion weights: Biosignal=40%, Visual=60%")
     print("=" * 60)
 
-    # Initialize and run pipeline
     pipeline = IntegratedDemoPipeline(
         csv_file_path=csv_file,
         video_file_path=video_file,
@@ -692,7 +634,6 @@ def main():
         visual_weight=0.6,
     )
 
-    # Run the complete demo
     results = pipeline.run_demo()
 
     print("\n" + "=" * 60)
