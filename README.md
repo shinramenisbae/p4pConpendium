@@ -1,4 +1,4 @@
-### p4pConpendium
+## p4pConpendium
 
 Research compendium for the P4P project. This repository contains the materials required to understand, reproduce, and extend the project: models, pre‑pilot study data, and the study web application.
 
@@ -18,6 +18,9 @@ Research compendium for the P4P project. This repository contains the materials 
 - `Web application/`
   - Vite + React study app for stimulus presentation, SAM ratings, webcam overlays, and optional API integration with the models.
   - How to run/build: see `Web application/README.md`.
+ 
+- `Suggestions for futurework`
+   - This file outlines some potential for future work.
 
 ### Quick start pointers
 
